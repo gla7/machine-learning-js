@@ -1,3 +1,6 @@
+From https://www.udemy.com/machine-learning-with-javascript
+Cloned from https://github.com/stephengrider/mlkits
+
 # ML Kits
 
 Starter projects for learning about Machine Learning.
