@@ -24,23 +24,35 @@ function onScoreUpdate(dropPosition, bounciness, size, bucketLabel) {
 // run an analysis to predict what k gives greatest accuracy
 function runAnalysis() {
   const testSetSize = 100;
-  const [testSet, trainingSet] = splitDataset(outputs, testSetSize); // hardcoded test set to be 10 items
+  const k = 10; // uncomment this line if you want to compare different features
 
-  _.range(1, 25).forEach(k => {
+  // const [testSet, trainingSet] = splitDataset(minMax(outputs, 3), testSetSize); // uncomment this line if you want to compare different k values
+
+  // _.range(1, 25).forEach(k => { // uncomment this line if you want to compare different k
+  _.range(0, 3).forEach(feature => { // uncomment this line if you want to compare different features
     // here for each k, for each of the testSet elements, we get a prediction of its end value based on
     // the training set, and compare
+    const data = _.map(outputs, row => [row[feature], _.last(row)]); // uncomment this line if you want to compare different features
+    const [testSet, trainingSet] = splitDataset(minMax(data, 1), testSetSize); // uncomment this line if you want to compare different features
     const accuracy = _.chain(testSet)
-      .filter(testPoint => knn(trainingSet, testPoint[0], k) === testPoint[3]) // which predictions get it right
+      .filter(testPoint => knn(trainingSet, _.initial(testPoint), k) === _.last(testPoint)) // which predictions get it right
       .size() // get a count of them
       .divide(testSetSize) // divide by the total items to get an accuracy percentage
       .value()
-    console.log(`accuracy: ${accuracy} for k=${k}`);
+    // console.log(`accuracy: ${accuracy} for k=${k}`); // uncomment this line if you want to compare different k values
+    console.log(`accuracy: ${accuracy} for featrue ${feature}`); // uncomment this line if you want to compare different features
   })
 }
 
 // we will use data = trainingSet
 function knn(data, point, k) {
-  return _.chain(data).map(row => [distance(row[0], point), row[3]]) // only concerned with abs dist from drop position and bucket
+  // initial gets all array elements but the last, and last gets the last
+  return _.chain(data).map(row => {
+      return [
+        distance(_.initial(row), point),
+        _.last(row)
+      ]
+    }) // only concerned with abs dist from desired feature space point and bucket
     .sortBy(row => row[0]) // sort data by abs distance
     .slice(0, k) // here we look at the closest k neighbors to prediction point
     .countBy(row => row[1]) // countBy returns an object with keys as the occurrence and value number of occurrences so that we select highest one
@@ -53,8 +65,12 @@ function knn(data, point, k) {
 }
 
 // we use this function to check closeness of available observations to desired predictionPoint
-function distance(pointA, pointB) {
-  return Math.abs(pointA - pointB);
+function distance(pointA, pointB) { // pythagorean distance in n-dimensional space
+  return _.chain(pointA)
+  	.zip(pointB) // gathers same indeces in same array in the corresponding index
+  	.map(([a, b]) => (a - b) ** 2) // set up pythagorean distance in each dimension
+  	.sum() // get square of hypotenuse
+  	.value() ** 0.5 // take square root
 }
 
 // here we split our observations into the testSet and trainingSet
@@ -66,3 +82,31 @@ function splitDataset(data, testCount) {
 
   return [testSet, trainingSet];
 }
+
+// this function normalizes the data, so that the ranges of the features is always 0-1
+function minMax (data, featureCount) { // feature count is to not normalize bucket label also!
+  const clonedData = _.cloneDeep(data);
+
+  // for each feature to be normalized (i is a column or feature)
+  for (let i = 0; i < featureCount; i++) {
+    const column = clonedData.map(row => row[i]); // we extract the corresponding column here
+
+    const min = _.min(column); // determine min of that feature in dataset
+    const max = _.max(column); // determine max of that feature in dataset
+
+    // we iterate over each row (data point) and modify it so that it is normalized
+    for (let j = 0; j < clonedData.length; j++) {
+      clonedData[j][i] = (clonedData[j][i] - min) / (max - min); // we modify each value to normalize it
+    }
+  }
+
+  return clonedData;
+}
+
+// NB: the ball bounciness, from observation, makes the result more unpredictable, so maybe
+// it might not be a great feature considered. One way to make sure is to run the analysis
+// using only one feature and then running the analysis using only another feature and then
+// comparing the two.
+
+// After carrying out the above analysis, it seems like the only useful feature (the one that
+// has a greater chance of success than just chance) is drop position.
