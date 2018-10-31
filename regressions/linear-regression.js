@@ -24,7 +24,7 @@ class LinearRegression {
     this.mseHistory = []; // to see how to adjust learning rate, perhaps could just be 2 values, last and current
   }
 
-  gradientDescent() {
+  gradientDescent(features, labels) {
     // slow but explicit approach
     // const currentGuessesForMPG = this.features.map(row => {
     //   return this.m * row[0] + this.b; // mx_i + b
@@ -41,25 +41,40 @@ class LinearRegression {
     // this.b = this.b - this.options.learningRate * bSlope;
     // this.m = this.m - this.options.learningRate * mSlope;
     // fast version using tesnorflow
-    const currentGuesses = this.features.matMul(this.weights); // m_jx_i + bx_0
-    const differences = currentGuesses.sub(this.labels); // m_jx_i + bx_0 - actual_i
+    const currentGuesses = features.matMul(this.weights); // m_jx_i + bx_0
+    const differences = currentGuesses.sub(labels); // m_jx_i + bx_0 - actual_i
 
     // 2/n SUM_i(x_i_t(m_jx_i + bx_0 - actual_i)) BUT we don't include the 2 since this derivative
     // is used for learning rate purposes only:
-    const gradients = this.features
+    const gradients = features
                        .transpose()
                        .matMul(differences)
-                       .div(this.features.shape[0]);
+                       .div(features.shape[0]);
 
     this.weights = this.weights.sub(gradients.mul(this.options.learningRate));
   }
 
   train() {
+    const batchQuantity = Math.floor(this.features.shape[0] / this.options.batchSize);
     for (let i = 0; i < this.options.iterations; i++) {
-      this.gradientDescent();
+      for (let j = 0; j < batchQuantity; j++) {
+        const startIndex = this.options.batchSize * j;
+        const { batchSize } = this.options;
+
+        // slice method first arg is the coordinate of the start of the slice and second
+        // arg is [size of slice, up to which col (select all with -1)]
+        const featuresSlice = this.features.slice([startIndex, 0], [batchSize, -1]);
+        const labelsSlice = this.labels.slice([startIndex, 0], [batchSize, -1]);
+
+        this.gradientDescent(featuresSlice, labelsSlice);
+      }
       this.recordMSE();
-      this.updateLearningRate()
+      this.updateLearningRate();
     }
+  }
+
+  predict(observations) {
+    return this.processFeatures(observations).matMul(this.weights);
   }
 
   test(testFeatures, testLabels) { // tests my prediction line against test data

@@ -54,6 +54,14 @@
 // 4. if MSE got bigger, then reduce learning rate by half (this is arbitrary)
 // 5. if MSE got smaller, increase learning rate by 5%
 
+// a further optimization we can do to arrive at the m and b values quicker are batch gradient descent
+// and stochastic gradient descent. so far, we have done this: on every iteration, we calculate the slope
+// of the mse using all the datapoints in the training set to modify m and b one time. with batch gradient
+// descent, in each iteration, instead of using all training set datapoints, we use subsets so that the
+// computation is quicker, and each iteration we can use a different batch of the training data. with
+// stochastic gradient descent, on each iteration we only use one random datapoint to adjust m and b values
+// so this is fastest, though less thorough.
+
 require('@tensorflow/tfjs-node');
 
 const tf = require('@tensorflow/tfjs');
@@ -63,7 +71,8 @@ const plot = require('node-remote-plot');
 
 const TEST_DATA_RECORDS = 50;
 const LEARNING_RATE = 0.1;
-const ITERATIONS = 100;
+const ITERATIONS = 3;
+const BATCH_SIZE = 10;
 
 let { features, labels, testFeatures, testLabels } = loadCSV(
   './cars.csv',
@@ -80,7 +89,8 @@ const regression = new LinearRegression(
   labels,
   {
     learningRate: LEARNING_RATE,
-    iterations: ITERATIONS
+    iterations: ITERATIONS,
+    batchSize: BATCH_SIZE
   }
 );
 
@@ -95,3 +105,8 @@ plot({
 });
 
 console.log(`R^2 is ${r2}`)
+
+// predict an arbitrary mpg for a car with 120 hp, wight 2, and displacement 380
+regression.predict([
+  [120, 2, 380]
+]).print();
