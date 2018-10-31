@@ -65,7 +65,7 @@
 require('@tensorflow/tfjs-node');
 
 const tf = require('@tensorflow/tfjs');
-const loadCSV = require('./load-csv');
+const loadCSV = require('../load-csv');
 const LinearRegression = require('./linear-regression');
 const plot = require('node-remote-plot');
 
@@ -75,7 +75,7 @@ const ITERATIONS = 3;
 const BATCH_SIZE = 10;
 
 let { features, labels, testFeatures, testLabels } = loadCSV(
-  './cars.csv',
+  '../data/cars.csv',
   {
     shuffle: true,
     splitTest: TEST_DATA_RECORDS,
