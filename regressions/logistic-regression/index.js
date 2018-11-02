@@ -7,10 +7,10 @@
 //              /
 // ____________/
 //
-// and it is h(x) = 1/(1 - e^-(mx + b)) (if only one feature) and in  general h(X) = 1/(1 - e^-(w_T X))
-// and basically by looking at its base form h(z) = 1/(1 - e^-z) and plotting it we see that it has
+// and it is h(x) = 1/(1 + e^-x) (if only one feature) and in  general h(X w) = 1/(1 + e^-(X w))
+// and basically by looking at its base form h(z) = 1/(1 + e^-z) and plotting it we see that it has
 // assymptotes at h = 0, 1. also when x = 0, h = 0.5, with no turning points, so we get the shape above.
-// how do we get the w_T? well, we can define a cost function thus (remember h is the guess
+// how do we get the w? well, we can define a cost function thus (remember h is the guess
 // and y is the actual value):
 //
 // Cost(h, y) = - ln(h) if y = 1      (a)
@@ -21,7 +21,7 @@
 // minimize the sum of all costs analogous to how we minimized the sum of all the distances from the
 // actual value in linear regression. So, we have a mean error of
 //
-// J(w_T X) = 1/m * SUM_m Cost_m(h, y)
+// J(X w) = 1/m * SUM_m Cost_m(h(X w), y_m)
 //
 // and we can compact the cost function to
 //
@@ -29,7 +29,7 @@
 //
 // so if we minimize J, we differentiate to eventually get
 //
-// dJ/hX = 1/m * SUM_i X_i * (h(X_i) - y_i)
+// dJ/hX = 1/m * SUM_i X_i_T * (h(X_i w) - y_i)
 //
 // note that this is the same as linear regression! we will thus multiply this by a learning rate and
 // subract this from the weights' previous values. to compare accuracy, we use the predicted weights to
