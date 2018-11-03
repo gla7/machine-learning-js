@@ -29,7 +29,7 @@ class MultinominalLogisticRegression {
                        .matMul(differences)
                        .div(features.shape[0]);
 
-    this.weights = this.weights.sub(gradients.mul(this.options.learningRate));
+    return this.weights.sub(gradients.mul(this.options.learningRate));
   }
 
   train() {
@@ -39,10 +39,15 @@ class MultinominalLogisticRegression {
         const startIndex = this.options.batchSize * j;
         const { batchSize } = this.options;
 
-        const featuresSlice = this.features.slice([startIndex, 0], [batchSize, -1]);
-        const labelsSlice = this.labels.slice([startIndex, 0], [batchSize, -1]);
+        // we do not assign the weights here anymore because we have wrapped this in a tf.tidy in train()
+        // so as to not keep all the tensors generated in every loop, so here we return the updated weights
+        // which are returned in turn in the tf.tidy in train, and this is assigned to the updated weights
+        this.weights = tf.tidy(() => {
+          const featuresSlice = this.features.slice([startIndex, 0], [batchSize, -1]);
+          const labelsSlice = this.labels.slice([startIndex, 0], [batchSize, -1]);
 
-        this.gradientDescent(featuresSlice, labelsSlice);
+          return this.gradientDescent(featuresSlice, labelsSlice);
+        });
       }
       this.recordCost();
       this.updateLearningRate();
@@ -93,12 +98,21 @@ class MultinominalLogisticRegression {
   }
 
   recordCost() {
-    // cost function can keep the sigmoid since it still describes the penalty for
-    // not getting a guess right
-    const guesses = this.features.matMul(this.weights).sigmoid();
-    const termOne = this.labels.transpose().matMul(guesses.log());
-    const termTwo = this.labels.mul(-1).add(1).transpose().matMul(guesses.mul(-1).add(1).log());
-    const cost = termOne.add(termTwo).div(this.features.shape[0]).mul(-1).get(0, 0);
+    const cost = tf.tidy(() => {
+      // cost function can keep the sigmoid since it still describes the penalty for
+      // not getting a guess right
+      const guesses = this.features.matMul(this.weights).sigmoid();
+      // see note below for the add 1e-7
+      const termOne = this.labels.transpose().matMul(guesses.add(1e-7).log());
+      // note that we add 1e-7 in case any of our guesses rounds up to 1, since we then
+      // multiply by -1 and then subtract 1 and then take the log... this would result in -infty.
+      // since the guesses can never quite be zero (assyptotical value), after we add a small
+      // number that ensures the log will never be log of zero
+      const termTwo = this.labels.mul(-1).add(1).transpose().matMul(guesses.mul(-1).add(1).add(1e-7).log());
+
+      return termOne.add(termTwo).div(this.features.shape[0]).mul(-1).get(0, 0);
+    });
+
     this.costHistory.unshift(cost);
   }
 
