@@ -82,10 +82,14 @@ class MultinominalLogisticRegression {
     if (this.mean && this.variance) return features.sub(this.mean).div(this.variance.pow(0.5));
     const { mean, variance } = tf.moments(features, 0);
 
-    this.mean = mean;
-    this.variance = variance;
+    // if variances are zero, features.sub(mean).div(variance.pow(0.5)) becomes an issue,
+    // so we deal with that by changing zeroes to ones using logicalNot method
+    const filler = variance.cast('bool').logicalNot().cast('float32');
 
-    return features.sub(mean).div(variance.pow(0.5));
+    this.mean = mean;
+    this.variance = variance.add(filler); // it will add the zeroes to ones from filler
+
+    return features.sub(mean).div(this.variance.pow(0.5));
   }
 
   recordCost() {
